@@ -1,2 +1,3 @@
 # MultiRPG
-Demo project for multiple player
+Demo project for multiple player,
+Just for fun
