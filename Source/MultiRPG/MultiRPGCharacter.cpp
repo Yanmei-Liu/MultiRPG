@@ -9,6 +9,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Net/UnrealNetwork.h"
+#include "RMagicProjectile.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -47,6 +49,16 @@ AMultiRPGCharacter::AMultiRPGCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
+	MaxHealth = 100.0f;
+	CurrentHealth = MaxHealth;
+
+	//初始化投射物类
+	ProjectileClass = ARMagicProjectile::StaticClass();
+	//初始化射速
+	FireRate = 0.25f;
+	bIsFiringWeapon = false;
+
+	bReplicates = true;
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -64,6 +76,33 @@ void AMultiRPGCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+}
+
+void AMultiRPGCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Replicate CurrentHealth
+	DOREPLIFETIME(AMultiRPGCharacter, CurrentHealth);
+}
+
+void AMultiRPGCharacter::SetCurrentHealth(float healthValue)
+{
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		CurrentHealth = FMath::Clamp(healthValue, 0.f, MaxHealth);
+		OnHealthUpdate();
+	}
+}
+
+float AMultiRPGCharacter::TakeDamage(float DamageTaken, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	// return Super::TakeDamage(DamageTaken, DamageEvent, EventInstigator, DamageCauser);
+
+	float damageApplied = CurrentHealth - DamageTaken;
+	SetCurrentHealth(damageApplied);
+	return damageApplied;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -86,6 +125,67 @@ void AMultiRPGCharacter::SetupPlayerInputComponent(class UInputComponent* Player
 
 	}
 
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AMultiRPGCharacter::StartFire);
+}
+
+void AMultiRPGCharacter::OnRep_CurrentHealth()
+{
+	OnHealthUpdate();
+}
+
+void AMultiRPGCharacter::OnHealthUpdate()
+{
+	// Client only
+	if (IsLocallyControlled())
+	{
+		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+
+		if (CurrentHealth <= 0)
+		{
+			FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+		}
+	}
+
+	// Server only
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+	}
+
+	// For all
+
+}
+
+
+void AMultiRPGCharacter::StartFire()
+{
+	if (!bIsFiringWeapon)
+	{
+		bIsFiringWeapon = true;
+		UWorld* World = GetWorld();
+		World->GetTimerManager().SetTimer(FiringTimer, this, &AMultiRPGCharacter::StopFire, FireRate, false);
+		HandleFire();
+	}
+}
+
+void AMultiRPGCharacter::StopFire()
+{
+	bIsFiringWeapon = false;
+}
+
+void AMultiRPGCharacter::HandleFire_Implementation()
+{
+	FVector spawnLocation = GetActorLocation() + (GetControlRotation().Vector() * 100.0f) + (GetActorUpVector() * 50.0f);
+	FRotator spawnRotation = GetControlRotation();
+
+	FActorSpawnParameters spawnParameters;
+	spawnParameters.Instigator = GetInstigator();
+	spawnParameters.Owner = this;
+
+	ARMagicProjectile* spawnedProjectile = GetWorld()->SpawnActor<ARMagicProjectile>(spawnLocation, spawnRotation, spawnParameters);
 }
 
 void AMultiRPGCharacter::Move(const FInputActionValue& Value)
