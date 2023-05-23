@@ -6,6 +6,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "UObject/ConstructorHelpers.h"
 
 // Sets default values
 AMProjectile::AMProjectile()
@@ -30,6 +31,15 @@ AMProjectile::AMProjectile()
 	if (DefaultExplosionEffect.Succeeded())
 	{
 		ExplosionEffect = DefaultExplosionEffect.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/AdvancedMagicFX12/Meshes/SM_ky_sphere.SM_ky_sphere"));
+	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	StaticMesh->SetupAttachment(RootComponent);
+
+	if (DefaultMesh.Succeeded())
+	{
+		StaticMesh->SetStaticMesh(DefaultMesh.Object);
 	}
 
 	MovementComp = CreateDefaultSubobject<UProjectileMovementComponent>("MovementComp");
