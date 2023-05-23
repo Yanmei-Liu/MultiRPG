@@ -10,7 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Net/UnrealNetwork.h"
-#include "RMagicProjectile.h"
+#include "MProjectile.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ AMultiRPGCharacter::AMultiRPGCharacter()
 	CurrentHealth = MaxHealth;
 
 	//初始化投射物类
-	ProjectileClass = ARMagicProjectile::StaticClass();
+	ProjectileClass = AMProjectile::StaticClass();
 	//初始化射速
 	FireRate = 0.25f;
 	bIsFiringWeapon = false;
@@ -185,7 +185,7 @@ void AMultiRPGCharacter::HandleFire_Implementation()
 	spawnParameters.Instigator = GetInstigator();
 	spawnParameters.Owner = this;
 
-	ARMagicProjectile* spawnedProjectile = GetWorld()->SpawnActor<ARMagicProjectile>(spawnLocation, spawnRotation, spawnParameters);
+	AMProjectile* spawnedProjectile = GetWorld()->SpawnActor<AMProjectile>(spawnLocation, spawnRotation, spawnParameters);
 }
 
 void AMultiRPGCharacter::Move(const FInputActionValue& Value)

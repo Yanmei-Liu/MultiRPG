@@ -57,7 +57,7 @@ protected:
 	void OnHealthUpdate();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay|Projectile")
-	TSubclassOf<class AThirdPersonMPProjectile> ProjectileClass;
+	TSubclassOf<class AMProjectile> ProjectileClass;
 
 	/** 射击之间的延迟，单位为秒。用于控制测试发射物的射击速度，还可防止服务器函数的溢出导致将SpawnProjectile直接绑定至输入。*/
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay")
