@@ -26,6 +26,12 @@ AMProjectile::AMProjectile()
 	EffectComp = CreateDefaultSubobject<UParticleSystemComponent>("EffectComp");
 	EffectComp->SetupAttachment(SphereComp);
 
+	static ConstructorHelpers::FObjectFinder<UParticleSystem> DefaultExplosionEffect(TEXT("/Game/AdvancedMagicFX12/particles/P_ky_hit_ice.P_ky_hit_ice"));
+	if (DefaultExplosionEffect.Succeeded())
+	{
+		ExplosionEffect = DefaultExplosionEffect.Object;
+	}
+
 	MovementComp = CreateDefaultSubobject<UProjectileMovementComponent>("MovementComp");
 	MovementComp->InitialSpeed = 1000.0f;
 	MovementComp->bRotationFollowsVelocity = true;
@@ -59,5 +65,11 @@ void AMProjectile::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AMProjectile::Destroyed()
+{
+	FVector spawnLocation = GetActorLocation();
+	UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
 }
 
